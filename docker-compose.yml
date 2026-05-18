@@ -46,3 +46,13 @@ services:
       - ./gateway/app:/app/app
     environment:
       - ENV=development
+
+  locust-tests:
+    image: locustio/locust
+    container_name: locust_benchmark
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./tests:/mnt/locust
+
+    command: -f /mnt/locust/locustfile.py
