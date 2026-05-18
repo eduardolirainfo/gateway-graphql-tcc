@@ -31,3 +31,8 @@ def obter_produto(produto_id: str):
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
     return produto
+
+
+# CONFIGURAÇÃO REAL DO PROMETHEUS AQUI:
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)

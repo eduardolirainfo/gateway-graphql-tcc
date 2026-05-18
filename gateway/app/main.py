@@ -72,3 +72,9 @@ graphql_app = GraphQLRouter(schema, context_getter=custom_context)
 
 app = FastAPI(title="Gateway GraphQL Otimizado - TCC")
 app.include_router(graphql_app, prefix="/graphql")
+
+# CONFIGURAÇÃO REAL DO PROMETHEUS AQUI:
+from prometheus_fastapi_instrumentator import Instrumentator
+
+# Isso aqui captura automaticamente as latências de todas as requisições e cria o endpoint /metrics
+Instrumentator().instrument(app).expose(app)
