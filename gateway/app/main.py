@@ -4,13 +4,7 @@ from fastapi import FastAPI
 import httpx
 from typing import List
 
-# 1. Definição dos Tipos GraphQL que espelham nossos microsserviços REST
-@strawberry.type
-class UsuarioType:
-    id: str
-    nome: str
-    email: str
-
+# 1. Definição dos Tipos com os Resolvers de Relacionamento (Gera o comportamento N+1)
 @strawberry.type
 class ProdutoType:
     id: str
@@ -23,31 +17,42 @@ class PedidoType:
     usuario_id: str
     produto_ids: List[str]
 
-# 2. Resoluções das consultas (Resolvers) buscando dados via HTTP assíncrono
+    # Resolver aninhado: Para CADA pedido, vai fazer requisições HTTP para o serviço de produtos
+    @strawberry.field
+    async def produtos(self) -> List[ProdutoType]:
+        detalhes_produtos = []
+        async with httpx.AsyncClient() as client:
+            for p_id in self.produto_ids:
+                # Dispara uma chamada REST por ID de produto (Padrão N+1 em cascata)
+                response = await client.get(f"http://produtos-service:8002/produtos/{p_id}")
+                if response.status_code == 200:
+                    detalhes_produtos.append(ProdutoType(**response.json()))
+        return detalhes_produtos
+
+@strawberry.type
+class UsuarioType:
+    id: str
+    nome: str
+    email: str
+
+    # Resolver aninhado: Para CADA usuário, busca a lista de pedidos dele no microsserviço
+    @strawberry.field
+    async def pedidos(self) -> List[PedidoType]:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"http://pedidos-service:8003/pedidos?usuario_id={self.id}")
+            dados = response.json()
+            return [PedidoType(**p) for p in dados]
+
+# 2. Consultas de Entrada (Root Queries)
 async def get_usuarios() -> List[UsuarioType]:
     async with httpx.AsyncClient() as client:
         response = await client.get("http://usuarios-service:8001/usuarios")
         dados = response.json()
         return [UsuarioType(**u) for u in dados]
 
-async def get_produtos() -> List[ProdutoType]:
-    async with httpx.AsyncClient() as client:
-        response = await client.get("http://produtos-service:8002/produtos")
-        dados = response.json()
-        return [ProdutoType(**p) for p in dados]
-
-async def get_pedidos() -> List[PedidoType]:
-    async with httpx.AsyncClient() as client:
-        response = await client.get("http://pedidos-service:8003/pedidos")
-        dados = response.json()
-        return [PedidoType(**p) for p in dados]
-
-# 3. Mapeamento das Consultas (Shallow Queries) no Schema
 @strawberry.type
 class Query:
     usuarios: List[UsuarioType] = strawberry.field(resolver=get_usuarios)
-    produtos: List[ProdutoType] = strawberry.field(resolver=get_produtos)
-    pedidos: List[PedidoType] = strawberry.field(resolver=get_pedidos)
 
 schema = strawberry.Schema(query=Query)
 graphql_app = GraphQLRouter(schema)
