@@ -34,3 +34,15 @@ services:
       - ./services/pedidos/app:/app/app
     environment:
       - ENV=development
+
+  gateway-service:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: graphql_gateway
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./gateway/app:/app/app
+    environment:
+      - ENV=development
