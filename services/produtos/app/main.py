@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
+from typing import List
 
 app = FastAPI(title="Microsserviço de Produtos")
 
@@ -12,6 +13,17 @@ PRODUTOS = {
 @app.get("/produtos")
 def listar_produtos():
     return list(PRODUTOS.values())
+
+@app.get("/produtos/lote")
+def obter_produtos_por_lote(ids: str = Query(..., description="IDs dos produtos separados por vírgula")):
+    """Retorna uma lista de produtos de uma vez só para atender ao DataLoader"""
+    lista_ids = ids.split(",")
+    resultado = []
+    for p_id in lista_ids:
+        produto = PRODUTOS.get(p_id.strip())
+        if produto:
+            resultado.append(produto)
+    return resultado
 
 @app.get("/produtos/{produto_id}")
 def obter_produto(produto_id: str):
