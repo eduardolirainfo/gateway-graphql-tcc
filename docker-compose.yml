@@ -22,3 +22,15 @@ services:
       - ./services/produtos/app:/app/app
     environment:
       - ENV=development
+
+  pedidos-service:
+    build:
+      context: ./services/pedidos
+      dockerfile: Dockerfile
+    container_name: pedidos_microservice
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./services/pedidos/app:/app/app
+    environment:
+      - ENV=development
