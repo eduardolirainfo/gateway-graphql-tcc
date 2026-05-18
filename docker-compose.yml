@@ -1,0 +1,12 @@
+services:
+  usuarios-service:
+    build:
+      context: ./services/usuarios
+      dockerfile: Dockerfile
+    container_name: usuarios_microservice
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/usuarios/app:/app/app
+    environment:
+      - ENV=development
