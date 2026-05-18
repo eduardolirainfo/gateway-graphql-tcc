@@ -10,3 +10,15 @@ services:
       - ./services/usuarios/app:/app/app
     environment:
       - ENV=development
+
+  produtos-service:
+    build:
+      context: ./services/produtos
+      dockerfile: Dockerfile
+    container_name: produtos_microservice
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./services/produtos/app:/app/app
+    environment:
+      - ENV=development
