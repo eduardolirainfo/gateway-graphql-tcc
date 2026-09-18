@@ -10,6 +10,11 @@ services:
       - ./services/usuarios/app:/app/app
     environment:
       - ENV=development
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   produtos-service:
     build:
@@ -22,6 +27,11 @@ services:
       - ./services/produtos/app:/app/app
     environment:
       - ENV=development
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   pedidos-service:
     build:
@@ -34,6 +44,11 @@ services:
       - ./services/pedidos/app:/app/app
     environment:
       - ENV=development
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   gateway-service:
     build:
@@ -46,6 +61,11 @@ services:
       - ./gateway/app:/app/app
     environment:
       - ENV=development
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   locust-tests:
     image: locustio/locust
