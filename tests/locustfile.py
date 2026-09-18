@@ -37,8 +37,16 @@ class BenchmarkUsuario(HttpUser):
         }
         """
         # O gateway roda na porta 8000, faremos o post na rota /graphql
-        self.client.post(
+        with self.client.post(
             "http://gateway-service:8000/graphql",
             json={"query": query},
-            name="GraphQL: Consulta Aninhada Complexa (N+1)"
-        )
+            name="GraphQL: Consulta Aninhada Complexa (N+1)",
+            catch_response=True
+        ) as response:
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    if "errors" in data and data["errors"]:
+                        response.failure(f"GraphQL Error: {data['errors'][0].get('message', 'Erro desconhecido')}")
+                except Exception as e:
+                    response.failure(f"Erro ao analisar JSON: {e}")
