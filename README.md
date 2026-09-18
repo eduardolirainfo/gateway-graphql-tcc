@@ -81,20 +81,24 @@ Troque `-f` pelo script desejado e `-u`/`--csv` pela carga/repetição. Os arqui
 
 ### Tabela 1 — Latência média por carga (ms)
 
-Média de 3 execuções de 2 minutos por carga, medindo o tempo total para montar a mesma visão agregada (usuários + pedidos + produtos) em cada abordagem:
+Cargas de 10/50/100 usuários: média de 3 execuções de 2 minutos. Carga de 200 usuários: média de **4 execuções limpas** (ver nota abaixo sobre isolamento do host). Todas medem o tempo total para montar a mesma visão agregada (usuários + pedidos + produtos) em cada abordagem:
 
 | Usuários virtuais | REST completo | GraphQL + DataLoader | GraphQL Nativo (N+1) |
 |---:|---:|---:|---:|
-| 10  | 21,6 | 20,1 | 27,1 |
-| 50  | 24,9 | 23,3 | 44,0 |
-| 100 | 23,1 | 24,3 | 62,9 |
-| 200 | 41,2 | 38,1 | 151,0 |
+| 10  | 18,7 | 20,8 | 26,3 |
+| 50  | 20,3 | 25,2 | 32,0 |
+| 100 | 25,2 | 23,3 | 34,8 |
+| 200 | 41,7 | 43,5 | 194,3 |
 
-Nenhuma execução registrou falhas. A leitura principal não é "GraphQL vence REST em latência bruta" — em microsserviços simples e locais, REST completo e GraphQL/DataLoader ficam estatisticamente empatados (diferença dentro do ruído de medição). O ganho do DataLoader aparece na comparação com o **GraphQL Nativo (N+1)**, que degrada mais de 5x sob carga (27ms → 151ms) por fazer uma chamada HTTP por produto sem batching — o mesmo problema estrutural que o REST evita apenas porque não existe um endpoint de lote público equivalente para consumidores externos.
+Falhas: nenhuma em 10/50/100 usuários; a 200 usuários, 0,50 (DataLoader) e 1,00 (Nativo) em média, 0 no REST completo. A leitura principal não é "GraphQL vence REST em latência bruta" — em microsserviços simples e locais, REST completo e GraphQL/DataLoader ficam estatisticamente empatados (diferença de 1-2ms, dentro do ruído de medição) em todas as cargas. O ganho do DataLoader aparece na comparação com o **GraphQL Nativo (N+1)**, que degrada mais de 4x só de 100 para 200 usuários (34,8ms → 194,3ms) por fazer uma chamada HTTP por produto sem batching — o mesmo problema estrutural que o REST evita apenas porque não existe um endpoint de lote público equivalente para consumidores externos.
 
 #### Nota metodológica: baseline REST
 
-A primeira versão do baseline REST (`tests/locustfile_rest.py`, usada nos runs `rest_run{1,2,3}_*users`) buscava apenas `/usuarios` e `/pedidos`, sem nunca chamar `/produtos` — ou seja, media uma REST fazendo *menos trabalho* do que a consulta GraphQL equivalente (que sempre resolve `produtos { nome preco }`). Isso inflava artificialmente a vantagem do REST. O `tests/locustfile_rest_completo.py` corrige isso buscando cada produto individualmente por pedido, fechando o mesmo grafo de dados retornado pelo GraphQL. Os arquivos `rest_run*.csv` foram mantidos no repositório como registro do problema, mas **não devem ser usados na Tabela 1** — os valores corretos vêm de `restc_run*.csv`.
+A primeira versão do baseline REST (`tests/locustfile_rest.py`, usada nos runs `rest_run{1,2,3}_*users`) buscava apenas `/usuarios` e `/pedidos`, sem nunca chamar `/produtos` — ou seja, media uma REST fazendo *menos trabalho* do que a consulta GraphQL equivalente (que sempre resolve `produtos { nome preco }`). Isso inflava artificialmente a vantagem do REST. O `tests/locustfile_rest_completo.py` corrige isso buscando cada produto individualmente por pedido, fechando o mesmo grafo de dados retornado pelo GraphQL.
+
+#### Nota metodológica: isolamento do host a 200 usuários
+
+A Tabela 1 acima (versão atual) foi medida **depois** de uma atualização das dependências Python do projeto (correção de vulnerabilidades do Dependabot — ver histórico do repositório), que por si só já mudou a latência medida em relação a uma execução anterior. Além disso, a carga de 200 usuários no cenário Nativo (N+1) mostrou-se muito sensível a qualquer disputa de recursos no host: um processo alheio ao projeto (um SQL Server rodando na mesma máquina, consumindo memória a ponto de causar swap) inflava e desestabilizava as medições nessa carga especificamente (10-100 usuários não foram afetados, por gerar bem menos pressão de memória/CPU). Após parar esse processo, repetimos a carga de 200 usuários 4 vezes por cenário para obter uma média mais robusta — ainda assim, o cenário Nativo (N+1) a 200 usuários apresenta variância residual real (mín. ~165ms, máx. ~240ms entre execuções), o que é consistente com o sistema operando próximo ao limite de saturação de CPU do container (1 vCPU). Os arquivos `rest_run*.csv`, `dl_run*.csv`, `nat_run*.csv` (matriz original) e `v2_*_run{1,2,3}*.csv` (matriz pré-isolamento) foram mantidos no repositório como registro histórico, mas **não devem ser usados na Tabela 1** — os valores corretos vêm de `v2_restc/dl/nat_run{1,2,3}_{10,50,100}users*.csv` e `v2_*_run{4,5,6,7}_200users*.csv`.
 
 ## Exemplo de consulta GraphQL
 
