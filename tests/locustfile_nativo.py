@@ -2,43 +2,38 @@ import uuid
 
 from locust import HttpUser, task, between
 
-class BenchmarkUsuario(HttpUser):
-    # Tempo de espera simulado entre as requisições de cada usuário (1 a 2 segundos)
+# Medicao isolada do cenario Nativo (N+1), sem o DataLoader competindo pelo
+# mesmo produtos-service. Usado uma unica vez para gerar o baseline
+# comparativo da Tabela 1 sob o ambiente controlado atual - nao faz parte
+# do benchmark oficial (locustfile.py), que documenta REST + DataLoader.
+
+class BenchmarkNativo(HttpUser):
     wait_time = between(1, 2)
 
     def on_start(self):
-        # Identifica cada usuário virtual como um cliente distinto perante o
-        # throttling do Gateway. Sem isso, todos os usuários compartilhariam o
-        # mesmo IP de origem (o container do Locust) e dividiriam um único
-        # limite de 10 req/s, mascarando o comportamento real do DataLoader
-        # sob concorrência com falsos 429.
-        self.client_id = f"locust-benchmark-{uuid.uuid4()}"
+        self.client_id = f"locust-nativo-{uuid.uuid4()}"
 
     @task(weight=2)
     def testar_rest_direto(self):
-        """Simula um cliente buscando dados diretamente via REST nos microsserviços"""
-        # No Locust, o 'client' vai bater na URL base que definirmos na interface.
-        # Para o teste REST, vamos apontar diretamente para o serviço de usuários.
         with self.client.get("/usuarios", name="REST: Listar Usuários", catch_response=True) as response:
             if response.status_code == 200:
                 usuarios = response.json()
                 for usuario in usuarios:
-                    # Simula o frontend buscando os pedidos de cada usuário exposto
                     u_id = usuario["id"]
                     self.client.get(f"http://pedidos-service:8003/pedidos?usuario_id={u_id}", name="REST: Buscar Pedidos do Usuário")
             else:
                 response.failure("Falha ao listar usuários no REST")
 
     @task(weight=1)
-    def testar_graphql_dataloader(self):
-        """Consulta aninhada contra o Gateway GraphQL usando o DataLoader (batching)"""
+    def testar_graphql_nativo(self):
+        """Mesma consulta aninhada, mas via produtosNativo (sem batching) - reproduz o N+1"""
         query = """
         query {
           usuarios {
             nome
             pedidos {
               id
-              produtos {
+              produtosNativo {
                 nome
                 preco
               }
@@ -46,12 +41,11 @@ class BenchmarkUsuario(HttpUser):
           }
         }
         """
-        # O gateway roda na porta 8000, faremos o post na rota /graphql
         with self.client.post(
             "http://gateway-service:8000/graphql",
             json={"query": query},
             headers={"X-Client-Id": self.client_id},
-            name="GraphQL: DataLoader",
+            name="GraphQL: Nativo (N+1)",
             catch_response=True
         ) as response:
             if response.status_code == 200:
