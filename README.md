@@ -59,7 +59,8 @@ Três scripts, cada um com um propósito isolado (evita que um padrão de tráfe
 |---|---|---|
 | `tests/locustfile.py` | REST + GraphQL/DataLoader | Benchmark oficial (mesma sessão, pesos 2:1) |
 | `tests/locustfile_nativo.py` | REST + GraphQL Nativo (sem batching, campo `produtosNativo`) | Baseline comparativo isolado do N+1 |
-| `tests/locustfile_rest.py` | Apenas REST | Baseline REST 100% isolado |
+| `tests/locustfile_rest_completo.py` | Apenas REST, agregação completa (usuários + pedidos + produtos) | Baseline REST 100% isolado, usado na Tabela 1 |
+| `tests/locustfile_rest.py` | Apenas REST, incompleto (não busca produtos) | **Descontinuado** — comparação injusta com o GraphQL, mantido só como registro histórico (ver [Nota metodológica](#nota-metodológica-baseline-rest)) |
 | `tests/locustfile_seguranca.py` | Rajadas (throttling) e queries com aliases (Query Cost) | Validação de segurança |
 
 **Interface web** (exploração manual): acesse `http://localhost:8089` (benchmark) ou `http://localhost:8090` (segurança) e configure usuários virtuais e taxa de spawn.
@@ -68,15 +69,32 @@ Três scripts, cada um com um propósito isolado (evita que um padrão de tráfe
 
 ```bash
 docker compose run --rm locust-tests \
-  -f /mnt/locust/locustfile.py \
+  -f /mnt/locust/locustfile_rest_completo.py \
   --headless \
   --host http://usuarios-service:8001 \
   -u 50 -r 50 -t 2m \
-  --csv /mnt/locust/results/run1_50users \
+  --csv /mnt/locust/results/restc_run1_50users \
   --only-summary
 ```
 
 Troque `-f` pelo script desejado e `-u`/`--csv` pela carga/repetição. Os arquivos `*_stats.csv` resultantes contêm Total de Requisições, RPS, Latência Média, percentis e Falhas — a mesma tabela é obtida tirando a média aritmética das 3 repetições de cada carga.
+
+### Tabela 1 — Latência média por carga (ms)
+
+Média de 3 execuções de 2 minutos por carga, medindo o tempo total para montar a mesma visão agregada (usuários + pedidos + produtos) em cada abordagem:
+
+| Usuários virtuais | REST completo | GraphQL + DataLoader | GraphQL Nativo (N+1) |
+|---:|---:|---:|---:|
+| 10  | 21,6 | 20,1 | 27,1 |
+| 50  | 24,9 | 23,3 | 44,0 |
+| 100 | 23,1 | 24,3 | 62,9 |
+| 200 | 41,2 | 38,1 | 151,0 |
+
+Nenhuma execução registrou falhas. A leitura principal não é "GraphQL vence REST em latência bruta" — em microsserviços simples e locais, REST completo e GraphQL/DataLoader ficam estatisticamente empatados (diferença dentro do ruído de medição). O ganho do DataLoader aparece na comparação com o **GraphQL Nativo (N+1)**, que degrada mais de 5x sob carga (27ms → 151ms) por fazer uma chamada HTTP por produto sem batching — o mesmo problema estrutural que o REST evita apenas porque não existe um endpoint de lote público equivalente para consumidores externos.
+
+#### Nota metodológica: baseline REST
+
+A primeira versão do baseline REST (`tests/locustfile_rest.py`, usada nos runs `rest_run{1,2,3}_*users`) buscava apenas `/usuarios` e `/pedidos`, sem nunca chamar `/produtos` — ou seja, media uma REST fazendo *menos trabalho* do que a consulta GraphQL equivalente (que sempre resolve `produtos { nome preco }`). Isso inflava artificialmente a vantagem do REST. O `tests/locustfile_rest_completo.py` corrige isso buscando cada produto individualmente por pedido, fechando o mesmo grafo de dados retornado pelo GraphQL. Os arquivos `rest_run*.csv` foram mantidos no repositório como registro do problema, mas **não devem ser usados na Tabela 1** — os valores corretos vêm de `restc_run*.csv`.
 
 ## Exemplo de consulta GraphQL
 
@@ -105,10 +123,11 @@ gateway/app/query_cost.py   # Extensão customizada de Query Cost Analysis
 services/usuarios/          # Microsserviço REST de Usuários
 services/pedidos/           # Microsserviço REST de Pedidos
 services/produtos/          # Microsserviço REST de Produtos
-tests/locustfile.py         # Benchmark oficial (REST + DataLoader)
-tests/locustfile_nativo.py  # Baseline isolado do GraphQL Nativo (N+1)
-tests/locustfile_rest.py    # Baseline isolado do REST
-tests/locustfile_seguranca.py # Testes de throttling e Query Cost Analysis
+tests/locustfile.py             # Benchmark oficial (REST + DataLoader)
+tests/locustfile_nativo.py      # Baseline isolado do GraphQL Nativo (N+1)
+tests/locustfile_rest_completo.py # Baseline isolado do REST (usuários + pedidos + produtos) — usado na Tabela 1
+tests/locustfile_rest.py        # Baseline REST antigo/incompleto — descontinuado, ver Nota metodológica
+tests/locustfile_seguranca.py   # Testes de throttling e Query Cost Analysis
 prometheus.yml               # Configuração de scraping do Prometheus
 docker-compose.yml            # Orquestração de todos os serviços
 ```

@@ -17,3 +17,6 @@ Thumbs.db
 
 # Resultados de testes de carga (gerados, nao versionados)
 tests/results/
+
+# Documentos pessoais/TCC (nunca vao para o GitHub)
+.docs/
