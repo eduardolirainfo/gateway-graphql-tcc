@@ -77,6 +77,18 @@ services:
     depends_on:
       - gateway-service
     command: -f /mnt/locust/locustfile.py
+
+  locust-seguranca:
+    image: locustio/locust
+    container_name: locust_seguranca
+    ports:
+      - "8090:8089"
+    volumes:
+      - ./tests:/mnt/locust
+    depends_on:
+      - gateway-service
+    command: -f /mnt/locust/locustfile_seguranca.py
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus_tcc

@@ -1,6 +1,6 @@
 import strawberry
 from strawberry.fastapi import GraphQLRouter
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from contextlib import asynccontextmanager
 import httpx
 from typing import List
@@ -8,6 +8,11 @@ from strawberry.dataloader import DataLoader
 # 1. IMPORTAR O LIMITADOR DE PROFUNDIDADE NATIVO E DESABILITAR INTROSPECÇÃO
 from strawberry.extensions import QueryDepthLimiter, DisableIntrospection
 from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
+from .query_cost import QueryCostLimiter
 
 @strawberry.type
 class ProdutoType:
@@ -25,6 +30,19 @@ class PedidoType:
     async def produtos(self, info: strawberry.Info) -> List[ProdutoType]:
         loader = info.context["produtos_loader"]
         return await loader.load_many(self.produto_ids)
+
+    @strawberry.field
+    async def produtos_nativo(self, info: strawberry.Info) -> List[ProdutoType]:
+        # Reproduz o cenario pre-DataLoader (uma chamada HTTP por produto)
+        # usando o mesmo client persistente, para comparacao isolada na
+        # Tabela 1 sob o ambiente controlado atual.
+        client = info.context["client"]
+        produtos = []
+        for produto_id in self.produto_ids:
+            response = await client.get(f"http://produtos-service:8002/produtos/{produto_id}")
+            response.raise_for_status()
+            produtos.append(ProdutoType(**response.json()))
+        return produtos
 
 @strawberry.type
 class UsuarioType:
@@ -67,16 +85,31 @@ async def custom_context(request: Request):
         "client": client
     }
 
-# 2. ATIVAR A EXTENSÃO COM LIMITE MÁXIMO DE 3 NÍVEIS E DESABILITAR INTROSPECÇÃO
+# 2. ATIVAR A EXTENSÃO COM LIMITE MÁXIMO DE 3 NÍVEIS, CUSTO DE CONSULTA E DESABILITAR INTROSPECÇÃO
+# Pesos maiores para pedidos/produtos: campos que disparam chamadas HTTP
+# downstream por item resolvido, cobrindo ataques de largura (aliases
+# repetidos) que o QueryDepthLimiter, sozinho, não detecta.
 schema = strawberry.Schema(
-    query=Query, 
+    query=Query,
     extensions=[
         QueryDepthLimiter(max_depth=3),
+        QueryCostLimiter(max_cost=50, field_costs={"pedidos": 5, "produtos": 5}),
         DisableIntrospection()
     ]
 )
 
 graphql_app = GraphQLRouter(schema, context_getter=custom_context)
+
+# 3. THROTTLING: limite de requisições por cliente (identificado pelo header
+# X-Client-Id; sem o header, cai no IP de origem)
+def get_client_identifier(request: Request) -> str:
+    return request.headers.get("X-Client-Id", get_remote_address(request))
+
+limiter = Limiter(key_func=get_client_identifier)
+
+@limiter.limit("10/second")
+async def enforce_rate_limit(request: Request) -> None:
+    return None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -85,7 +118,9 @@ async def lifespan(app: FastAPI):
     await app.state.http_client.aclose()
 
 app = FastAPI(title="Gateway GraphQL Otimizado e Protegido - TCC", lifespan=lifespan)
-app.include_router(graphql_app, prefix="/graphql")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.include_router(graphql_app, prefix="/graphql", dependencies=[Depends(enforce_rate_limit)])
 
 # Instrumentação do Prometheus
 Instrumentator().instrument(app).expose(app)
