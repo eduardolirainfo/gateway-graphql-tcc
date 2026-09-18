@@ -24,3 +24,6 @@ def obter_pedido(pedido_id: str):
         if pedido["id"] == pedido_id:
             return pedido
     raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
