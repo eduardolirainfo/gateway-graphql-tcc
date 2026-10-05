@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,GraphQL: Nativo (N+1),"ConnectionResetError(104, 'Connection reset by peer')",5,2026-09-18T20:14:48Z,2026-09-18T20:16:06Z

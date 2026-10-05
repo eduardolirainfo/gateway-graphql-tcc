@@ -1,0 +1,4 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,GraphQL: Nativo (N+1),CatchResponseError('GraphQL Error: Server disconnected without sending a response.'),1,2026-09-18T20:31:44Z,2026-09-18T20:31:44Z
+POST,GraphQL: Nativo (N+1),"ConnectionResetError(104, 'Connection reset by peer')",2,2026-09-18T20:30:38Z,2026-09-18T20:30:43Z
+GET,REST: Listar Usuários,CatchResponseError('Falha ao listar usuários no REST'),1,2026-09-18T20:31:43Z,2026-09-18T20:31:43Z

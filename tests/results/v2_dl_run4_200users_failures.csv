@@ -1,0 +1,3 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,GraphQL: DataLoader,"ConnectionResetError(104, 'Connection reset by peer')",1,2026-09-18T21:56:38Z,2026-09-18T21:56:38Z
+GET,REST: Buscar Pedidos do Usuário,RemoteDisconnected('Remote end closed connection without response'),1,2026-09-18T21:56:35Z,2026-09-18T21:56:35Z

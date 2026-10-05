@@ -1,0 +1,3 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,GraphQL: Nativo (N+1),"ConnectionResetError(104, 'Connection reset by peer')",6,2026-09-18T20:23:01Z,2026-09-18T20:24:21Z
+GET,REST: Listar Usuários,CatchResponseError('Falha ao listar usuários no REST'),1,2026-09-18T20:22:49Z,2026-09-18T20:22:49Z

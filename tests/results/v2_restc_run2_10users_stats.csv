@@ -1,0 +1,3 @@
+Type,Name,Request Count,Failure Count,Median Response Time,Average Response Time,Min Response Time,Max Response Time,Average Content Size,Requests/s,Failures/s,50%,66%,75%,80%,90%,95%,98%,99%,99.9%,99.99%,100%
+WORKFLOW,REST: Agregação Completa do Cliente,793,0,19,19.051014550246325,11.690378189086914,71.86532020568848,602.0,6.668710802039791,0.0,19,20,21,21,22,23,28,56,72,72,72
+,Aggregated,793,0,19,19.051014550246325,11.690378189086914,71.86532020568848,602.0,6.668710802039791,0.0,19,20,21,21,22,23,28,56,72,72,72

@@ -89,11 +89,16 @@ async def custom_context(request: Request):
 # Pesos maiores para pedidos/produtos: campos que disparam chamadas HTTP
 # downstream por item resolvido, cobrindo ataques de largura (aliases
 # repetidos) que o QueryDepthLimiter, sozinho, não detecta.
+# produtosNativo (baseline N+1 da Tabela 1) tem o mesmo peso de produtos: sem
+# isso, aliases repetidos dele custariam 3 pontos cada e escapariam do limite.
 schema = strawberry.Schema(
     query=Query,
     extensions=[
         QueryDepthLimiter(max_depth=3),
-        QueryCostLimiter(max_cost=50, field_costs={"pedidos": 5, "produtos": 5}),
+        QueryCostLimiter(
+            max_cost=50,
+            field_costs={"pedidos": 5, "produtos": 5, "produtosNativo": 5},
+        ),
         DisableIntrospection()
     ]
 )
@@ -101,7 +106,12 @@ schema = strawberry.Schema(
 graphql_app = GraphQLRouter(schema, context_getter=custom_context)
 
 # 3. THROTTLING: limite de requisições por cliente (identificado pelo header
-# X-Client-Id; sem o header, cai no IP de origem)
+# X-Client-Id; sem o header, cai no IP de origem).
+# Limitação conhecida: o header é controlado pelo cliente, então quem alterna
+# o valor a cada requisição escapa do limite. Ele é mantido porque o benchmark
+# precisa de um bucket por usuário virtual (todos saem do mesmo IP). Em
+# produção, a chave deveria ser o IP real (atrás de proxy confiável) ou uma
+# identidade autenticada.
 def get_client_identifier(request: Request) -> str:
     return request.headers.get("X-Client-Id", get_remote_address(request))
 

@@ -15,8 +15,16 @@ env/
 .DS_Store
 Thumbs.db
 
-# Resultados de testes de carga (gerados, nao versionados)
-tests/results/
+# Resultados de testes de carga (gerados). Versionados apenas os CSVs que
+# sustentam a Tabela 1 e o ensaio de seguranca; o restante (stats_history,
+# exceptions e matrizes antigas) fica local.
+tests/results/*
+!tests/results/v2_*_stats.csv
+!tests/results/v2_*_failures.csv
+!tests/results/seguranca_final_stats.csv
+!tests/results/seguranca_final_failures.csv
+!tests/results/tabela1_consolidada.csv
+!tests/results/figura1_curva_degradacao.png
 
 # Documentos pessoais/TCC (nunca vao para o GitHub)
 .docs/

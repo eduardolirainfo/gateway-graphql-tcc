@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,REST: Listar Usuários,CatchResponseError('Falha ao listar usuários no REST'),1,2026-09-18T22:06:06Z,2026-09-18T22:06:06Z

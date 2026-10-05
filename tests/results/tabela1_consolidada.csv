@@ -1,0 +1,13 @@
+usuarios,cenario,runs,total_req,rps,lat_media_ms,lat_media_dp_ms,lat_media_min_ms,lat_media_max_ms,p50_ms,p95_ms,falhas_media
+10,REST: Agregação Completa do Cliente,3,790,6.65,18.67,0.62,17.95,19.05,18.33,23.67,0.0
+10,GraphQL: Nativo (N+1),3,267,2.24,26.32,1.92,24.16,27.83,25.33,34.67,0.0
+10,GraphQL: DataLoader,3,259,2.17,20.79,0.97,19.74,21.64,20.33,24.67,0.0
+50,REST: Agregação Completa do Cliente,3,3935,33.06,20.25,0.59,19.63,20.8,16.0,25.33,0.0
+50,GraphQL: Nativo (N+1),3,1316,11.05,32.0,4.99,26.26,35.29,23.33,51.0,0.0
+50,GraphQL: DataLoader,3,1341,11.25,25.15,1.2,23.95,26.36,21.0,37.33,0.0
+100,REST: Agregação Completa do Cliente,3,7857,65.98,25.2,0.51,24.64,25.64,17.33,31.67,0.0
+100,GraphQL: Nativo (N+1),3,2583,21.67,34.79,2.55,31.85,36.41,21.67,59.33,0.0
+100,GraphQL: DataLoader,3,2606,21.87,23.32,2.04,21.32,25.39,17.0,37.0,0.0
+200,REST: Agregação Completa do Cliente,4,15540,130.45,41.67,1.78,39.88,43.88,25.75,74.25,0.0
+200,GraphQL: Nativo (N+1),4,5045,42.33,194.34,32.68,165.53,240.08,87.75,552.5,1.0
+200,GraphQL: DataLoader,4,5228,43.87,43.54,2.49,40.86,46.73,24.75,79.75,0.5

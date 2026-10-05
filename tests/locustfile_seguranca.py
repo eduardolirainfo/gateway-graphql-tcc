@@ -21,6 +21,11 @@ query {
 }
 """
 
+# Mesmo ataque de largura, mas pelo campo produtosNativo (sem batching): cada
+# alias dispara uma chamada HTTP por produto. Precisa ser barrado como o
+# ataque acima; com peso 1 ele custaria 36 pontos e passaria pelo limite de 50.
+QUERY_ALIAS_ABUSO_NATIVO = QUERY_ALIAS_ABUSO.replace("produtos {", "produtosNativo {")
+
 
 class ThrottlingAbuseUser(HttpUser):
     """Dispara rajadas de requisições com o mesmo X-Client-Id para estourar
@@ -50,7 +55,14 @@ class ThrottlingAbuseUser(HttpUser):
                     response.failure(f"Status inesperado: {response.status_code}")
 
         if 429 not in respostas:
-            pass  # a rajada não atingiu o limite; ver latência de rede do ambiente
+            # Registra como falha: throttling que nunca dispara invalida o ensaio.
+            self.environment.events.request.fire(
+                request_type="POST",
+                name="Seguranca: Rajada sem nenhum 429 (throttling nao disparou)",
+                response_time=0,
+                response_length=0,
+                exception=AssertionError(f"Nenhum 429 em {len(respostas)} requisicoes"),
+            )
 
 
 class QueryCostAbuseUser(HttpUser):
@@ -61,10 +73,23 @@ class QueryCostAbuseUser(HttpUser):
 
     @task
     def consulta_custo_excessivo(self):
+        self._enviar(
+            QUERY_ALIAS_ABUSO,
+            "Seguranca: Consulta com Custo Excessivo (bloqueio esperado)",
+        )
+
+    @task
+    def consulta_custo_excessivo_nativo(self):
+        self._enviar(
+            QUERY_ALIAS_ABUSO_NATIVO,
+            "Seguranca: Custo Excessivo via produtosNativo (bloqueio esperado)",
+        )
+
+    def _enviar(self, query: str, name: str):
         with self.client.post(
             "http://gateway-service:8000/graphql",
-            json={"query": QUERY_ALIAS_ABUSO},
-            name="Seguranca: Consulta com Custo Excessivo (bloqueio esperado)",
+            json={"query": query},
+            name=name,
             catch_response=True,
         ) as response:
             if response.status_code != 200:
