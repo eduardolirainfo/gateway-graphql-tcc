@@ -31,6 +31,35 @@ curl -s -X POST http://localhost:8000/graphql \
 Deve retornar os 3 usuários de exemplo (`Eduardo Lira`, `Alain Fuentes`,
 `Fulano de Tal`).
 
+### Quero só ver funcionando no navegador, sem rodar comando nenhum
+
+As Figuras 1 e 2 do TCC já são imagens estáticas, embutidas no próprio
+`.docx`/`.pdf` — não é preciso rodar nada pra "ver" elas, só abrir o
+documento. Os passos abaixo (e o resto deste guia) servem para quem quer
+*verificar*/*reproduzir* os números por trás delas, não para visualizá-las.
+
+Dito isso, com o ambiente de pé (passo 1), três interfaces visuais ficam
+disponíveis de graça, sem nenhum comando extra:
+
+| O quê | Onde | O que mostra |
+|---|---|---|
+| GraphiQL (explorador do Gateway) | http://localhost:8000/graphql | Editor de consultas GraphQL interativo, no navegador |
+| Prometheus (métricas ao vivo) | http://localhost:9090/graph | Gráficos das queries PromQL (ex.: CPU do Gateway) |
+| Locust (benchmark, interface web) | http://localhost:8089 | Dispara carga e mostra gráficos de RPS/latência em tempo real |
+| Locust (segurança, interface web) | http://localhost:8090 | Mesma coisa, para os testes de throttling/Query Cost |
+
+As interfaces do Locust só aparecem se ele for iniciado **sem** `--headless`.
+Para isso, em vez de `docker compose run --rm ...`, use:
+
+```bash
+docker compose up locust-tests       # benchmark, abre em localhost:8089
+docker compose up locust-seguranca   # seguranca, abre em localhost:8090
+```
+
+Aí é só abrir o endereço no navegador, definir número de usuários e taxa de
+spawn, e clicar em "Start" — os gráficos de latência/RPS atualizam ao vivo
+na própria página do Locust.
+
 ## 2. Reproduzir a Tabela 1 (métricas de desempenho)
 
 A Tabela 1 do TCC usa 3 repetições por carga para 10/50/100 usuários e 4
