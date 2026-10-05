@@ -25,6 +25,7 @@ tests/results/*
 !tests/results/seguranca_final_failures.csv
 !tests/results/tabela1_consolidada.csv
 !tests/results/figura1_curva_degradacao.png
+!tests/results/figura2_cpu_utilizacao.png
 
 # Documentos pessoais/TCC (nunca vao para o GitHub)
 .docs/

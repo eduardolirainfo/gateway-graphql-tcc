@@ -113,9 +113,8 @@ Lê `tests/results/tabela1_consolidada.csv` e grava
 
 ## 4. Gerar a Figura 2 (utilização de CPU via Prometheus)
 
-Com o ambiente de pé (passo 1), dispare uma carga pesada em paralelo e, no
-mesmo intervalo, consulte a API do Prometheus com a mesma query citada no
-TCC:
+Com o ambiente de pé (passo 1), dispare uma carga pesada e, logo em seguida
+(ou enquanto ela roda), gere a figura:
 
 ```bash
 docker compose run --rm locust-tests \
@@ -123,15 +122,30 @@ docker compose run --rm locust-tests \
   --headless --host http://usuarios-service:8001 \
   -u 200 -r 200 -t 2m --csv /mnt/locust/results/figura2_run --only-summary &
 
-sleep 30
-curl -s 'http://localhost:9090/api/v1/query?query=rate(process_cpu_seconds_total%7Bjob%3D%22graphql-gateway%22%7D%5B30s%5D)' | python3 -m json.tool
+sleep 90
+python3 tests/gerar_figura2.py
 ```
 
-Isso devolve o uso de CPU do processo do Gateway (núcleos) naquele instante —
-o mesmo dado usado para plotar a Figura 2. Para a série temporal completa (o
-gráfico com os dois patamares, antes/durante a carga), use o endpoint
-`/api/v1/query_range` do Prometheus com `start`/`end` cobrindo o teste, ou a
-interface web em `http://localhost:9090/graph`.
+`tests/gerar_figura2.py` consulta a API do Prometheus (`query_range`) pelos
+últimos minutos, detecta sozinho o trecho sob carga (onde a CPU sobe acima
+da linha de base) para sombrear, e grava
+`tests/results/figura2_cpu_utilizacao.png` no mesmo estilo visual da Figura
+1. Para um intervalo específico (ex.: reaproveitar um teste já rodado), use
+`--inicio`/`--fim` em ISO 8601 UTC:
+
+```bash
+python3 tests/gerar_figura2.py --inicio 2026-10-05T06:21:40Z --fim 2026-10-05T06:23:40Z
+```
+
+O resultado não é pixel-idêntico ao da Figura 1 do TCC a cada execução — é
+telemetria ao vivo, varia entre execuções como qualquer medição deste
+projeto (mesma razão da Tabela 1 reportar desvio-padrão) — mas reproduz o
+mesmo método e a mesma forma de curva (subida, platô sob carga, queda).
+
+Se preferir só explorar visualmente sem gerar a figura, a interface web do
+Prometheus (`http://localhost:9090/graph`, aba "Graph") mostra a mesma
+métrica ao vivo — mas é uma ferramenta de depuração, não produz a figura
+publicável; para isso, use o script acima.
 
 ## 5. Testes de segurança (Throttling e Query Cost Analysis)
 
