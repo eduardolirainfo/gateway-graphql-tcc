@@ -2,6 +2,8 @@
 
 Projeto experimental de TCC que avalia o impacto de desempenho e a escalabilidade de um **API Gateway GraphQL** (Python + [Strawberry](https://strawberry.rocks/)) atuando sobre um ecossistema de microsserviços **REST** puros (Usuários, Pedidos e Produtos), com foco no problema de consultas em cascata (N+1), nas estratégias de mitigação e em governança de borda (segurança).
 
+Os códigos-fonte e scripts de teste utilizados neste experimento estão disponíveis neste repositório público. Para reproduzir do zero cada tabela, figura e afirmação de segurança citada no TCC, veja o guia passo a passo em [REPRODUTIBILIDADE.md](REPRODUTIBILIDADE.md).
+
 ## Arquitetura
 
 ```
